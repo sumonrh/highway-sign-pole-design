@@ -1,8 +1,11 @@
 export const CONSTANTS = {
   GRAVITY: 9.81,
   AIR_DENSITY: 1.225,
+  AIR_DENSITY_CSA: 1.25,
   STEEL_DENSITY: 7850,
+  STEEL_GAMMA: 77, // kN/m³ (CSA nominal unit weight of steel)
   ICE_DENSITY: 900,
+  ICE_GAMMA: 9.0, // kN/m³
   STEEL_E: 200000,
   STEEL_G: 77000,
   DEFAULT_FY: 350,

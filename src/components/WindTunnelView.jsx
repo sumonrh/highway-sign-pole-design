@@ -1,275 +1,48 @@
-import { useState, useRef, useEffect } from 'react'
+import React, { useRef, useState, useEffect, useMemo } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime'
 
-function WindTunnelHUD({ input, results, windSpeed, setWindSpeed, windDeg, setWindDeg }) {
-  const rho = 1.225
-  const q = 0.5 * rho * windSpeed * windSpeed
-  const Re = windSpeed * (input.Dbase / 1000) / 1.5e-5
-  const regime = Re < 2e5 ? 'Subcritical' : Re < 3.5e5 ? 'Critical' : Re < 1e6 ? 'Supercritical' : 'Transcritical'
-  const F_sign = q * input.Cd_s * (input.Bsign * input.Dsign) / 1000
-  const F_pole = q * input.Cd_p * ((input.Dbase + input.Dtop) / 2 / 1000) * input.Hpole / 1000
-  const V_W = F_sign + F_pole
-  const M_W = F_sign * input.Hsign + F_pole * (input.Hpole / 2)
-  const T_W = F_sign * input.esign
-  const D_avg = (input.Dbase + input.Dtop) / 2 / 1000
-  const fs = 0.2 * windSpeed / D_avg
-  const fn = results?.aerodynamics?.f_n || 1.0
-  const Vcr = fn * D_avg / 0.2
-  const Ur = windSpeed / (fn * D_avg)
-  const Sc = results?.aerodynamics?.Sc || 20
-  const St = 0.2
-  const vivRisk = Sc < 10 && Math.abs(Ur - 6) < 1.5
-  const galloping = windSpeed > (2 * Sc * fn * D_avg)
+const Ii = Math.PI
 
-  const fmt = (n, d = 1) => Number(n).toFixed(d)
+function nv(e,t,n=0){let i=e.Bsign*e.Dsign,s=t?.625*e.Kz*e.Gwind*e.Vwind**2:.613*e.Kz*e.Kzt*e.Gwind*e.Vwind**2,a=(e.Dbase+e.Dtop)/2/1e3*e.Hpole,r=Math.cos(n)**2,o=s*e.CdSign*i/1e3*r,l=s*e.CdPole*a/1e3,c=e.Dbase-2*e.tw,h=Ii/4*(e.Dbase**2-c**2),d=Ii/64*(e.Dbase**4-c**4),f=d/(e.Dbase/2),p=(e.Dbase**3-c**3)/6,v=Math.sqrt(d/h),x=2*d,m=x/(e.Dbase/2),u=e.Dbase/e.tw,g=u<=13e3/e.Fy?1:u<=18e3/e.Fy?2:u<=66e3/e.Fy?3:4,_=e.Dtop-2*e.tw,S=Ii/4*(e.Dtop**2-_**2),R=e.gamIce*(Ii*(e.Dbase/1e3)*(e.tice/1e3)*e.Hpole+i*(e.tice/1e3)),C=e.gamS*((h+S)/2)/1e6*e.Hpole,T=C+e.Wdms,D=o+l,k=o*e.Hsign+l*(e.Hpole/2),y=o*e.esign,E=R,V=1.1*T,L=1.3*D,H=1.3*k,Z=1.3*y,B=1.1*T+1.3*E,Q=.7*D,W=.7*k,st=.7*y,pt=Math.max(V,B),xt=Math.max(L,Q),ee=Math.max(H,W),se=Math.max(Z,st),Y=e.phi*e.Fy*(g<=2?p:f)/1e6,nt=e.phi*h*e.Fy/1e3,_t=e.phi*.66*e.Fy*(.5*h)/1e3,ft=e.phi*.66*e.Fy*m/1e6,Ot=pt/nt,Nt=ee/Y,jt=xt/_t,oe=se/ft,kt=Ot+Nt,N=jt+oe,je=Math.max(kt,N),Wt=je<=1,Xt=e.Hpole*1e3,Ut=e.Hsign*1e3,pe=o*1e3*Ut**2*(3*Xt-Ut)/(6*e.Es*d),Pt=l*1e3/Xt*Xt**4/(8*e.Es*d),A=pe+Pt,M=Xt/e.deflRatio,F=A<=M,q=9.81,j=(e.Dbase+e.Dtop)/2/1e3,St=3*e.Es*d/Xt**3*1e3,it=e.Wdms*1e3/q,ct=C*1e3/q,qt=it+.24*ct,tt=qt>0?1/(2*Ii)*Math.sqrt(St/qt):0,mt=tt>0?1/tt:1/0,Dt=e.nuAir>0?e.Vwind*j/e.nuAir:1/0,Ct=Dt<3e5?"Subcritical":Dt<35e5?"Supercritical":"Transcritical",dt=j>0?e.St*e.Vwind/j:0,Yt=e.St>0?tt*j/e.St:1/0,zt=tt>0&&j>0?e.Vwind/(tt*j):1/0,he=e.Hpole>0?ct/e.Hpole:0,U=e.rhoAir>0&&j>0?4*Ii*he*e.zeta/(e.rhoAir*j**2):1/0,ut=U<10,X=ut&&Yt<=e.Vwind,rt=2*U*tt*j/1,ht=rt<=e.Vwind&&rt>0;return{A_sign:i,qz:s,Aproj_pole:a,F_sign:o,F_pole:l,di:c,A_sec:h,I_sec:d,S_sec:f,Z_sec:p,r_sec:v,J_sec:x,Ct_sec:m,Dt:u,Cls:g,A_sec_t:S,W_ice:R,W_pole:C,P_D:T,V_W:D,M_W:k,T_W:y,P_ice:E,Pf1:V,Vf1:L,Mf1:H,Tf1:Z,Pf2:B,Vf2:Q,Mf2:W,Tf2:st,Pf:pt,Vf:xt,Mf:ee,Tf:se,Mr:Y,Pr:nt,Vr:_t,Tr:ft,U_P:Ot,U_M:Nt,U_V:jt,U_T:oe,U_axbend:kt,U_sheartor:N,U_gov:je,strengthOK:Wt,d_sign:pe,d_pole:Pt,d_total:A,d_limit:M,deflOK:F,D_avg:j,fn:tt,Tn:mt,m_eff:qt,m_e:he,Re:Dt,regime:Ct,fs:dt,Vcr:Yt,Ur:zt,Sc:U,St:e.St,Vdesign:e.Vwind,vivProne:ut,vivRisk:X,Vg:rt,galloping:ht}}var Tt=(e,t=1)=>Number.isFinite(e)?e.toLocaleString("en-US",{minimumFractionDigits:t,maximumFractionDigits:t}):"-",Pa=e=>Number.isFinite(e)?Math.abs(e)>=1e5||Math.abs(e)<.001&&e!==0?e.toExponential(3):Tt(e,1):"-";
 
-  return (
-    <aside className="tunnel-hud">
-      <div className="result-header">
-        <div>
-          <p className="eyebrow">DYNAMIC WIND LOAD · ESTIMATE</p>
-          <h2>Wind on the Structure</h2>
-        </div>
-        <span>{regime}</span>
-      </div>
-      <div className="wind-inputs">
-        <label className="wind-input">
-          Wind speed
-          <input type="number" min={0} max={120} step={1} value={windSpeed} onChange={e => setWindSpeed(Number(e.target.value))} />
-          <span>m/s</span>
-        </label>
-        <label className="wind-input">
-          Direction
-          <input type="number" min={0} max={360} step={5} value={windDeg} onChange={e => setWindDeg(Number(e.target.value))} />
-          <span>°</span>
-        </label>
-      </div>
-      <p className="dir-note">0° = wind square to the sign face; sign load ∝ cos²θ.</p>
-      <div className="fig-result">
-        <span><b>V</b> {fmt(windSpeed,0)} m/s</span>
-        <span><b>Re</b> {fmt(Re)}</span>
-        <span className={vivRisk ? 'ng' : 'ok'}><b>VIV</b> {vivRisk ? 'REVIEW' : 'OK'}</span>
-        <span className={galloping ? 'ng' : 'ok'}><b>Galloping</b> {galloping ? 'FAIL' : 'OK'}</span>
-      </div>
-      <table className="data">
-        <tbody>
-          <tr><td>Dynamic pressure, q = ½ρV²</td><td className="v">{fmt(q,0)}</td><td className="u">Pa</td></tr>
-          <tr><td>Wind drag on sign, F_sign</td><td className="v">{fmt(F_sign,2)}</td><td className="u">kN</td></tr>
-          <tr><td>Wind drag on pole, F_pole</td><td className="v">{fmt(F_pole,2)}</td><td className="u">kN</td></tr>
-          <tr><td>Base shear (service), V_W</td><td className="v">{fmt(V_W,2)}</td><td className="u">kN</td></tr>
-          <tr><td>Overturning moment, M_W</td><td className="v">{fmt(M_W,1)}</td><td className="u">kN·m</td></tr>
-          <tr><td>Torsion (eccentric sign), T_W</td><td className="v">{fmt(T_W,1)}</td><td className="u">kN·m</td></tr>
-          <tr><td>Vortex-shedding freq, fs</td><td className="v">{fmt(fs,2)}</td><td className="u">Hz</td></tr>
-          <tr><td>Natural frequency, fn</td><td className="v">{fmt(fn,2)}</td><td className="u">Hz</td></tr>
-          <tr><td>Lock-in wind speed, Vcr</td><td className="v">{fmt(Vcr,1)}</td><td className="u">m/s</td></tr>
-          <tr><td>Reduced velocity, Ur</td><td className="v">{fmt(Ur,1)}</td><td className="u">—</td></tr>
-          <tr><td>Scruton number, Sc</td><td className="v">{fmt(Sc,1)}</td><td className="u">—</td></tr>
-          <tr><td>Strouhal number, St</td><td className="v">{fmt(St,2)}</td><td className="u">—</td></tr>
-        </tbody>
-      </table>
-      <p className="assumption">Flow model superposes exact inviscid potential-flow fields for a circular cylinder (pole, per height) and a sphere doublet (sign blockage), with an empirical Kármán wake at fs = St·V/D. Forces are service wind demands from the design model — indicative only, for visualising the wind–structure interaction. Not for design or construction.</p>
-    </aside>
-  )
+function Cu({rows:e}){return _jsx("table",{className:"data",children:_jsx("tbody",{children:e.map(([t,n,i])=>_jsxs("tr",{children:[_jsx("td",{children:t}),_jsx("td",{className:"v",children:n}),_jsx("td",{className:"u",children:i})]},t))})})}
+
+var F2=["front","back","left","right","top","iso","flow"];function H2({input:e,r:t,csa:n}){let i=useRef(null),s=useRef(null),a=useRef(null),r=useRef(null),_psizeRef=useRef(null),o=useRef({input:e,r:t}),[l,c]=useState(!0),[h,d]=useState(1),[f,p]=useState("#2600d1"),[v,x]=useState(()=>Math.round(e.Vwind)),[m,u]=useState(0),[g,_]=useState(2),[S,R]=useState(!1),[_psize,_setPsize]=useState(.34),[_truck,_setTruck]=useState(!0),[_tkSpd,_setTkSpd]=useState(24),C=useMemo(()=>nv({...e,Vwind:v},n,m*Math.PI/180),[e,v,n,m]),_C10=useMemo(()=>nv({...e,Vwind:10},n,m*Math.PI/180),[e,n,m]);o.current={input:e,r:C,r10:_C10};let T=useRef(!0);T.current=l;let D=useRef(v);D.current=v;let k=useRef(0);k.current=m*Math.PI/180;let y=useRef(0);y.current=g;let E=useRef(!1);E.current=S;let _truckRef=useRef(!0);_truckRef.current=_truck;let _tkSpdRef=useRef(24);_tkSpdRef.current=_tkSpd;let _liveRef=useRef(null),_tkFxRef=useRef(null);let V=useRef({h:.7,s:.95});useEffect(()=>{let L={h:0,s:0,l:0};new THREE.Color(f).getHSL(L),V.current={h:L.h,s:Math.max(.45,L.s)}},[f]),useEffect(()=>{let L=i.current;if(!L)return;let H=L.clientWidth||800,Z=L.clientHeight||520,B=new THREE.WebGLRenderer({antialias:!0,powerPreference:"high-performance"});B.setPixelRatio(Math.min(window.devicePixelRatio,2)),B.setSize(H,Z),B.toneMapping=THREE.ACESFilmicToneMapping,B.toneMappingExposure=1.05,L.appendChild(B.domElement);let Q=new THREE.Scene();Q.fog=new THREE.Fog(13623536,80,700);let W=new THREE.PerspectiveCamera(45,H/Z,.1,3e3),st=new OrbitControls(W,B.domElement);st.enableDamping=!0,st.dampingFactor=.08,st.maxPolarAngle=1.55,st.minDistance=4,st.maxDistance=420;let pt=()=>{let bt=document.createElement("canvas");bt.width=bt.height=64;let wt=bt.getContext("2d"),Rt=wt.createRadialGradient(64/2,64/2,0,64/2,64/2,64/2);return Rt.addColorStop(0,"rgba(255,255,255,1)"),Rt.addColorStop(.4,"rgba(255,255,255,0.85)"),Rt.addColorStop(1,"rgba(255,255,255,0)"),wt.fillStyle=Rt,wt.beginPath(),wt.arc(64/2,64/2,64/2,0,7),wt.fill(),new THREE.CanvasTexture(bt)},xt=()=>{let bt=document.createElement("canvas");bt.width=bt.height=256;let wt=bt.getContext("2d"),Rt=(Bt,me,Xe)=>{let Ie=wt.createRadialGradient(Bt,me,0,Bt,me,Xe);Ie.addColorStop(0,"rgba(255,255,255,0.95)"),Ie.addColorStop(1,"rgba(255,255,255,0)"),wt.fillStyle=Ie,wt.beginPath(),wt.arc(Bt,me,Xe,0,7),wt.fill()};for(let Bt=0;Bt<16;Bt++)Rt(256*(.25+Math.random()*.5),256*(.42+Math.random()*.18),256*(.1+Math.random()*.14));return new THREE.CanvasTexture(bt)},ee=()=>{let wt=document.createElement("canvas");wt.width=512,wt.height=256;let Rt=wt.getContext("2d");Rt.fillStyle="#3a3d43",Rt.fillRect(0,0,512,256);for(let me=0;me<2600;me++)Rt.fillStyle=`rgba(0,0,0,${Math.random()*.05})`,Rt.fillRect(Math.random()*512,Math.random()*256,2,2);Rt.fillStyle="#e9e9e9",Rt.fillRect(0,256*.1,512,5),Rt.fillRect(0,256*.9-5,512,5),Rt.fillStyle="#e7c008",Rt.fillRect(0,256*.47,512,4),Rt.fillRect(0,256*.53-4,512,4);let Bt=new THREE.CanvasTexture(wt);return Bt.wrapS=THREE.RepeatWrapping,Bt},se=pt(),Y=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:!1,uniforms:{top:{value:new THREE.Color(3110096)},bot:{value:new THREE.Color(15003384)},off:{value:40},ex:{value:.75}},vertexShader:"varying vec3 vW; void main(){ vW=(modelMatrix*vec4(position,1.0)).xyz; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }",fragmentShader:"uniform vec3 top; uniform vec3 bot; uniform float off; uniform float ex; varying vec3 vW; void main(){ float h=normalize(vW+vec3(0.0,off,0.0)).y; gl_FragColor=vec4(mix(bot,top,pow(max(h,0.0),ex)),1.0); }"}),nt=new THREE.Mesh(new THREE.SphereGeometry(900,32,16),Y);Q.add(nt);let _t=new THREE.Vector3(.55,.72,.35).normalize(),ft=new THREE.DirectionalLight(16774370,3.1);ft.position.copy(_t.clone().multiplyScalar(160)),Q.add(ft),Q.add(new THREE.HemisphereLight(12574975,5335866,.95)),Q.add(new THREE.AmbientLight(16777215,.22));let Ot=new THREE.Sprite(new THREE.SpriteMaterial({map:se,color:16773312,transparent:!0,opacity:.9,blending:THREE.AdditiveBlending,depthWrite:!1,fog:!1}));Ot.position.copy(_t.clone().multiplyScalar(620)),Ot.scale.set(90,90,1),Q.add(Ot);let Nt=xt();for(let At=0;At<14;At++){let bt=new THREE.Sprite(new THREE.SpriteMaterial({map:Nt,transparent:!0,opacity:.9,depthWrite:!1,fog:!1})),wt=Math.random()*Math.PI*2,Rt=130+Math.random()*230;bt.position.set(Math.cos(wt)*Rt,75+Math.random()*95,Math.sin(wt)*Rt);let Bt=70+Math.random()*95;bt.scale.set(Bt,Bt*.55,1),Q.add(bt)}let jt=o.current.input,oe=new THREE.Mesh(new THREE.PlaneGeometry(1600,1600),new THREE.MeshStandardMaterial({color:6263872,roughness:1}));oe.rotation.x=-Math.PI/2,Q.add(oe);let kt=jt.esign,N=new THREE.Mesh(new THREE.PlaneGeometry(320,14),new THREE.MeshStandardMaterial({color:10128490,roughness:1}));N.rotation.x=-Math.PI/2,N.position.set(0,.01,kt),Q.add(N);let je=ee();je.repeat.set(32,1);let Wt=new THREE.Mesh(new THREE.PlaneGeometry(320,9),new THREE.MeshStandardMaterial({map:je,roughness:.92}));Wt.rotation.x=-Math.PI/2,Wt.position.set(0,.02,kt),Q.add(Wt);let Xt=new THREE.MeshStandardMaterial({color:7178402,roughness:1,flatShading:!0});for(let At=0;At<9;At++){let bt=60+Math.random()*90,wt=new THREE.Mesh(new THREE.ConeGeometry(110+Math.random()*90,bt,5,1),Xt);wt.position.set(-360+At*88+(Math.random()-.5)*30,bt/2-8,-320-Math.random()*130),Q.add(wt)}let Ut=new THREE.CylinderGeometry(.16,.22,1.5,6),pe=new THREE.ConeGeometry(1.2,3.2,7),Pt=new THREE.MeshStandardMaterial({color:5979428,roughness:1}),A=new THREE.MeshStandardMaterial({color:3367468,roughness:1,flatShading:!0});for(let At=0;At<18;At++){let bt=0,wt=0,Rt=0;do bt=(Math.random()*2-1)*95,wt=(Math.random()*2-1)*95,Rt++;while(Rt<8&&Math.abs(wt-kt)<9&&Math.abs(bt)<45);let Bt=new THREE.Group(),me=new THREE.Mesh(Ut,Pt);me.position.y=.75;let Xe=new THREE.Mesh(pe,A);Xe.position.y=2.9,Bt.add(me,Xe);let Ie=.8+Math.random()*1.6;Bt.scale.setScalar(Ie),Bt.position.set(bt,0,wt),Q.add(Bt)}let _tkZ=kt+1.8,_tkX=-95,_tkPass=-99,_tkWheels=[],_tk=new THREE.Group();{let cb=new THREE.MeshStandardMaterial({color:11151658,metalness:.55,roughness:.32}),bx=new THREE.MeshStandardMaterial({color:15132402,metalness:.3,roughness:.55}),gl=new THREE.MeshStandardMaterial({color:1780282,metalness:.7,roughness:.12}),rb=new THREE.MeshStandardMaterial({color:1315350,roughness:.95}),sl=new THREE.MeshStandardMaterial({color:9279395,metalness:.7,roughness:.4}),ad=(g,m,x,y,z)=>{let o2=new THREE.Mesh(g,m);return o2.position.set(x,y,z),_tk.add(o2),o2};ad(new THREE.BoxGeometry(6.2,.42,2.3),sl,1.5,.95,0),ad(new THREE.BoxGeometry(3.1,2.5,2.52),cb,2.1,2.35,0),ad(new THREE.BoxGeometry(.12,1.1,2.32),gl,3.68,2.95,0),ad(new THREE.BoxGeometry(1.5,1.05,2.42),cb,4.4,1.6,0),ad(new THREE.BoxGeometry(.35,.5,2.5),sl,5.22,1.15,0),ad(new THREE.BoxGeometry(13.6,3.05,2.56),bx,-6.1,2.62,0),ad(new THREE.BoxGeometry(13.6,.34,2.3),sl,-6.1,.95,0),ad(new THREE.BoxGeometry(.16,2.9,2.5),sl,.72,2.62,0);let wg=new THREE.CylinderGeometry(.54,.54,.38,18);wg.rotateX(Math.PI/2);let hg=new THREE.CylinderGeometry(.24,.24,.42,12);hg.rotateX(Math.PI/2);for(let ax of[4.15,.75,-.45,-10.4,-11.7])for(let sd of[-1.16,1.16])_tkWheels.push(ad(wg,rb,ax,.54,sd)),ad(hg,sl,ax,.54,sd*1.18)}_tk.position.set(_tkX,0,_tkZ),Q.add(_tk);let _tkF0={x:0,z:0},_oX=0,_oZ=0,_vX=0,_vZ=0,_lfB=null,_lfT=null,_lfAcc=0,_fxMax=[0,0,0,0,0],_fxSpd=-1,_tkCX=-3.85,_tkHL=9.05,_tkHW=1.3,_tkTop=4.15,_tkStep=(ts,tn)=>{if(!_truckRef.current){_tk.visible=!1;return}_tk.visible=!0;let p0=_tkX;_tkX+=_tkSpdRef.current*ts,_tkX>70?_tkX=-70:p0<0&&_tkX>=0&&(_tkPass=tn),_tk.position.x=_tkX;let sp=_tkSpdRef.current*ts/.54;for(let wl of _tkWheels)wl.rotation.z-=sp},_tkFlow=(px,py,pz,tn,out)=>{if(!_truckRef.current)return;let wA=D.current*.23,wT=_tkSpdRef.current*.23,es=Math.max(3,wA,wT),wa=k.current,cw=Math.cos(wa),sw=Math.sin(wa),dx=px-_tkX-_tkCX,dz=pz-_tkZ;if(py>8||Math.abs(dz)>18||Math.abs(dx)>44)return;let ax=Math.abs(dx)/_tkHL,az=Math.abs(dz)/_tkHW,ay=py/_tkTop;ax<1&&az<1&&ay<1&&(()=>{let sq=1-Math.max(ax,Math.max(az,ay));out.z+=(dz>=0?1:-1)*3.4*sq*es,out.y+=2.4*sq*es})();let al=dx*cw+dz*sw,cr=-dx*sw+dz*cw,L=Math.abs(_tkHL*cw)+Math.abs(_tkHW*sw),W=Math.abs(_tkHL*sw)+Math.abs(_tkHW*cw),hf=py<=_tkTop?1:Math.exp(-(py-_tkTop)/1.6);if(hf>.05){if(al<-L){let wv=Math.exp((al+L)/2.6)*Math.exp(-cr*cr/(2.4*W*W))*hf;out.x-=.85*wv*wA*cw,out.z-=.85*wv*wA*sw,out.x+=(cr>=0?-1:1)*.8*wv*wA*sw,out.z+=(cr>=0?1:-1)*.8*wv*wA*cw,out.y+=.5*wv*wA}else if(al>L){let wv=Math.exp(-(al-L)/9)*Math.exp(-cr*cr/(2.6*W*W))*hf,sh=Math.sin(5.97*tn-.55*(al-L));out.x-=.9*wv*wA*cw,out.z-=.9*wv*wA*sw,out.x-=sh*.55*wv*wA*sw,out.z+=sh*.55*wv*wA*cw,out.y+=.25*wv*wA*Math.cos(5.97*tn-.4*(al-L))}else if(py>_tkTop){let wv=Math.exp(-(py-_tkTop)/1.3)*Math.exp(-cr*cr/(2*W*W));out.x+=.5*wv*wA*cw,out.z+=.5*wv*wA*sw,out.y+=.18*wv*wA}}let bx=dx+_tkHL;if(bx<0){let sB=-bx,env=Math.exp(-sB/16),rz=dz/3.4,ry=(py-2.1)/3,rad=Math.sqrt(rz*rz+ry*ry),core=Math.exp(-.8*rad*rad),wk=env*wT,pull=wk*Math.exp(-sB/8)*Math.exp(-.3*rad*rad),ur=1/Math.max(.3,rad),sl=Math.exp(-.4*rad*rad),sg=dz>=0?1:-1,e1=Math.sin(4.2*tn-.55*sB),e2=Math.cos(3.1*tn-.4*sB),e3=Math.sin(7.7*tn-.9*sB+1.3);out.x+=1.35*wk*core-.45*wk*core*e1;out.z-=1.6*pull*rz*ur,out.y-=1.3*pull*ry*ur;out.z+=.85*wk*core*e1-.6*wk*sl*sg*ry,out.y+=.55*wk*core*e2+.6*wk*sl*sg*rz+.25*wk*core*e3}else if(bx>2*_tkHL){let sF=bx-2*_tkHL,wv2=Math.exp(-sF/3.4)*Math.exp(-dz*dz/16)*Math.exp(-Math.max(0,py-2)/3)*wT;out.x+=.75*wv2,out.z+=(dz>=0?.6:-.6)*wv2,out.y+=.45*wv2}},_tkShaft=tn=>{if(!_truckRef.current)return 0;let wa=k.current,cw=Math.cos(wa),sw=Math.sin(wa),dx=-(_tkX+_tkCX),dz=-_tkZ,al=dx*cw+dz*sw,cr=-dx*sw+dz*cw,L=Math.abs(_tkHL*cw)+Math.abs(_tkHW*sw),W=Math.abs(_tkHL*sw)+Math.abs(_tkHW*cw),gv=0;al>L&&(gv+=.9*Math.exp(-(al-L)/22)*Math.exp(-cr*cr/(2.6*W*W))),al<-L&&(gv+=.45*Math.exp(-(-al-L)/6)*Math.exp(-cr*cr/(2.4*W*W)));gv*=.45*(.55+.45*Math.sin(4.4*tn));let dp=tn-_tkPass;return dp>=0&&dp<5&&(gv+=.22*Math.exp(-1.15*dp)*Math.sin(6.2832*Math.max(.2,o.current.r.fn)*dp)),gv},_tkForce=tn=>{if(!_truckRef.current)return _tkF0.x=0,_tkF0.z=0,_tkF0;let nx=_tkX+5.2,tl=_tkX-12.9,bw=Math.exp(-Math.pow((nx+2.5)/6,2)),wk=tl>0?Math.exp(-tl/16):Math.exp(tl/3.5),fn2=Math.max(.2,o.current.r.fn),ch=.55*Math.sin(11.3*tn)+.35*Math.sin(17.9*tn+1.7)+.45*Math.sin(6.2832*fn2*tn+.6),lz=Math.exp(-_tkZ*_tkZ/220);return _tkF0.x=(1.15*bw-.55*wk+.85*wk*ch)*lz,_tkF0.z=(.35*bw+.9*wk*(.5*ch+.5*Math.sin(13.7*tn+2.2)))*lz,_tkF0},_tkWind=tn=>_tkSpdRef.current*.8*Math.max(0,_tkShaft(tn));let M=new THREE.AxesHelper(3);M.position.y=.03,Q.add(M);let F=new THREE.ArrowHelper(new THREE.Vector3(1,0,0),new THREE.Vector3(-15,3,0),6,1132502,1.4,.9);Q.add(F);let q=new THREE.Group();Q.add(q);let j=new THREE.MeshStandardMaterial({color:10465740,metalness:.6,roughness:.35}),K=At=>{for(let hn=q.children.length-1;hn>=0;hn--){let Nn=q.children[hn];Nn.geometry?.dispose?.(),q.remove(Nn)}let bt=At.Dbase/2e3,wt=At.Dtop/2e3,Rt=new THREE.Mesh(new THREE.CylinderGeometry(wt,bt,At.Hpole,44,1),j);Rt.position.y=At.Hpole/2,q.add(Rt);let Bt=new THREE.Mesh(new THREE.CylinderGeometry(bt*1.6,bt*1.9,.18,44),new THREE.MeshStandardMaterial({color:5991298,metalness:.5,roughness:.5}));Bt.position.y=.09,q.add(Bt);let armLen=At.Larm||Math.max(At.esign+At.Bsign/2+0.2,At.esign);let armDia=(At.Darm||250)/2000;let harm=At.Hsign;let me=new THREE.Mesh(new THREE.CylinderGeometry(armDia,armDia,armLen,24),j);me.rotation.x=Math.PI/2,me.position.set(0,harm,armLen/2),q.add(me);let Xe=new THREE.Mesh(new THREE.BoxGeometry(.18,At.Dsign,At.Bsign),new THREE.MeshStandardMaterial({color:1777450,metalness:.2,roughness:.7,emissive:662058}));Xe.position.set(0,At.Hsign,At.esign),q.add(Xe);let Ie=new THREE.Mesh(new THREE.BoxGeometry(.20,At.Dsign*.9,At.Bsign*.95),new THREE.MeshStandardMaterial({color:15909198,metalness:.3,roughness:.5,transparent:!0,opacity:.22}));Ie.position.set(0,At.Hsign,At.esign),q.add(Ie)};K(o.current.input),a.current=K;let St=22e3,it=new Float32Array(St*3),ct=new Float32Array(St*3),qt=34,tt=19,mt=20,Dt=(At,bt)=>{let wt=k.current,Rt=Math.cos(wt),Bt=Math.sin(wt),me=-Bt,Xe=Rt,Ie=bt?-qt-Math.random()*5:(Math.random()*2-1)*qt,hn=(Math.random()*2-1)*tt;it[At*3+0]=Rt*Ie+me*hn,it[At*3+1]=Math.random()*mt,it[At*3+2]=Bt*Ie+Xe*hn},Ct=new THREE.BufferGeometry();Ct.setAttribute("position",new THREE.BufferAttribute(it,3)),Ct.setAttribute("color",new THREE.BufferAttribute(ct,3));let dt=0,Yt=At=>{dt=Math.max(500,Math.min(St,Math.floor(12e3*At)));for(let bt=0;bt<dt;bt++)Dt(bt,!1);Ct.setDrawRange(0,dt),Ct.getAttribute("position").needsUpdate=!0};Yt(h),r.current=Yt;let zt=new THREE.PointsMaterial({size:.34,map:se,vertexColors:!0,transparent:!0,opacity:.95,depthWrite:!1,sizeAttenuation:!0,alphaTest:.02}),he=new THREE.Points(Ct,zt);Q.add(he),_psizeRef.current=At=>{zt.size=At};let U=(At,bt,wt,Rt,Bt,me)=>{let Xe=k.current,Ie=Math.cos(Xe),hn=Math.sin(Xe),Nn=1,b=Nn,O=0,z=0,G=At*Ie+wt*hn,I=-At*hn+wt*Ie;if(bt>=0&&bt<=Rt.Hpole){let le=bt/Rt.Hpole,ce=Rt.Dbase/2e3*(1-le)+Rt.Dtop/2e3*le,Ee=G,Vt=I,Mt=Ee*Ee+Vt*Vt;if(Mt>1e-4){let Ve=ce*ce;if(Mt>Ve?(b+=-Nn*Ve*(Ee*Ee-Vt*Vt)/(Mt*Mt),z+=-2*Nn*Ve*Ee*Vt/(Mt*Mt)):(b+=Ee*4,z+=Vt*4),Ee>ce&&Math.abs(Vt)<ce*3.2){let ue=Math.min(2.2,Rt.St*Math.max(4,D.current)/(2*ce)),Un=Math.exp(-Ee*.14);z+=.9*Math.sin(2*Math.PI*ue*Bt-Ee*1.1)*Un,b*=1-.5*Un}}}let et=Math.sqrt(Math.max(.05,Rt.Bsign*Rt.Dsign)/Math.PI),at=At,lt=bt-Rt.Hsign,gt=wt-Rt.esign,vt=at*Ie+gt*hn,Et=-at*hn+gt*Ie,yt=lt,ne=Math.sqrt(vt*vt+yt*yt+Et*Et);if(ne>et){let le=et*et*et,ce=Math.pow(ne,5);if(b+=Nn*le*(ne*ne-3*vt*vt)/(2*ce),O+=-3*Nn*le*vt*yt/(2*ce),z+=-3*Nn*le*vt*Et/(2*ce),vt>0&&Math.sqrt(yt*yt+Et*Et)<et*1.3&&vt<12){let Ee=Math.min(2.2,Rt.St*Math.max(4,D.current)/(2*et)),Vt=Math.exp(-vt*.12);z+=1.1*Math.sin(2*Math.PI*Ee*Bt-vt*.9)*Vt,O+=.5*Math.cos(2*Math.PI*Ee*Bt-vt*.9)*Vt,b*=1-.55*Vt}}else b+=vt*4,O+=yt*4,z+=Et*4;me.x=b*Ie-z*hn,me.y=O,me.z=b*hn+z*Ie},ut=()=>{let At=o.current.input;return Math.max(At.Hpole,At.esign+At.Bsign/2,At.Bsign)*2.2+6},X=()=>{let At=o.current.input;return new THREE.Vector3(0,At.Hpole*.45,At.esign*.5)},$=At=>{let bt=ut(),wt=X(),Bt={iso:[bt*.7,bt*.6,bt*.7],front:[0,wt.y,bt],back:[0,wt.y,-bt],right:[bt,wt.y,0],left:[-bt,wt.y,0],top:[.001,bt,0],flow:[-bt*.85,bt*.4,bt*.55]}[At];W.position.set(wt.x+Bt[0],Bt[1],wt.z+Bt[2]),st.target.copy(wt),st.update()};s.current={setView:$},$("iso");let rt=()=>{H=L.clientWidth,Z=L.clientHeight,!(!H||!Z)&&(B.setSize(H,Z),W.aspect=H/Z,W.updateProjectionMatrix())},ht=new ResizeObserver(rt);ht.observe(L);let ae=Ct.getAttribute("position"),ze=Ct.getAttribute("color"),$e=new THREE.Color(),Qt={x:0,y:0,z:0},_n=new THREE.Vector3(),vi=new THREE.Vector3(),nr=0,No=performance.now(),ni=0,ir=()=>{nr=requestAnimationFrame(ir);let At=performance.now(),bt=(At-No)/1e3;No=At,bt=Math.min(bt,.05),st.update();let wt=k.current,Rt=Math.cos(wt),Bt=Math.sin(wt);if(F.setDirection(_n.set(Rt,0,Bt)),F.position.set(-Rt*15,3,-Bt*15),T.current){ni+=bt;let me=o.current.input,Xe=D.current*.23,Ie=V.current;_tkStep(bt,ni);for(let at=0;at<dt;at++){let lt=at*3,gt=it[lt],vt=it[lt+1],Et=it[lt+2];U(gt,vt,Et,me,ni,Qt),Qt.x*=Xe,Qt.y*=Xe,Qt.z*=Xe,_tkFlow(gt,vt,Et,ni,Qt),gt+=Qt.x*bt,vt+=Qt.y*bt,Et+=Qt.z*bt;let yt=gt*Rt+Et*Bt,ne=-gt*Bt+Et*Rt;yt>qt||vt<-.5||vt>mt+2||Math.abs(ne)>tt+2?Dt(at,D.current>=3):(it[lt]=gt,it[lt+1]=vt,it[lt+2]=Et);let le=Math.hypot(Qt.x,Qt.y,Qt.z)/Math.max(1.5,Xe,_tkSpdRef.current*.23),ce=Math.min(1,Math.max(0,(le-.2)/1.9));$e.setHSL(Ie.h,Ie.s,.38+.34*ce),ct[lt]=$e.r,ct[lt+1]=$e.g,ct[lt+2]=$e.b}ae.needsUpdate=!0,ze.needsUpdate=!0;let hn=Math.max(.2,o.current.r.fn),w0=6.2832*hn,zta=E.current?.005:.008,th0=(o.current.r10.d_total||0)/1e3/Math.max(1,me.Hpole),gwv=.06*Math.sin(1.95*ni)+.04*Math.sin(5.2*ni+1.1)+.025*Math.sin(10.7*ni+.4),vav=D.current*Math.max(.2,1+gwv),thD=th0*vav*vav/100,thL=.45*thD*Math.sin(6.2832*(o.current.r.fs||0)*ni),tkf=_tkForce(ni),thT=th0*_tkSpdRef.current*_tkSpdRef.current/100*.5,TgX=thD*Rt-thL*Bt+thT*tkf.x,TgZ=thD*Bt+thL*Rt+thT*tkf.z,ns=Math.min(32,Math.max(4,Math.ceil(w0*bt/.15))),sdt=bt/ns;for(let sI=0;sI<ns;sI++)_vX+=(w0*w0*(TgX-_oX)-2*zta*w0*_vX)*sdt,_oX+=_vX*sdt,_vZ+=(w0*w0*(TgZ-_oZ)-2*zta*w0*_vZ)*sdt,_oZ+=_vZ*sdt;let gn=E.current?1:1+y.current,G=_oX*gn,I=_oZ*gn,et=Math.hypot(G,I);et>1e-6?q.setRotationFromAxisAngle(vi.set(I,0,-G).normalize(),et):q.rotation.set(0,0,0),_lfAcc+=bt,_lfAcc>=.08&&(()=>{_lfAcc=0;let el=_liveRef.current;if(!el)return;(!_lfB||_lfB.length<5)&&(_lfB=el.querySelectorAll("b"),_lfT=el.querySelector(".lf-tag"));if(_lfB.length<5)return;let rr=o.current.r10,vt=_tkWind(ni),gw=.055*Math.sin(1.95*ni)+.035*Math.sin(5.2*ni+1.1)+.02*Math.sin(10.7*ni+.4),va=D.current*Math.max(.25,1+gw),wa2=k.current,vx=va*Math.cos(wa2)+vt,vz=va*Math.sin(wa2),vi=Math.hypot(vx,vz),f2=vi*vi/100;_lfB[0].textContent=vi.toFixed(1),_lfB[1].textContent=(.5*me.rhoAir*vi*vi/1e3).toFixed(2),_lfB[2].textContent=(rr.V_W*f2).toFixed(2),_lfB[3].textContent=(rr.M_W*f2).toFixed(1),_lfB[4].textContent=(Math.hypot(_oX,_oZ)*me.Hpole*1e3).toFixed(1),_lfT.textContent=vt>.4?"truck wake":"";let fx=_tkFxRef.current,fd=[1,1,2,2,2];if(!fx)_fxSpd=-1;else{let fb=fx.querySelectorAll("b");if(fb.length>=5){let ky=_tkSpdRef.current+"|"+D.current;ky!==_fxSpd&&(_fxSpd=ky,_fxMax=[0,0,0,0,0],fb.forEach((b2,z3)=>b2.textContent=(0).toFixed(fd[z3])));let m2=vt*vt/100,cur=[vt,.5*me.rhoAir*vt*vt,rr.V_W*m2,rr.M_W*m2,Math.hypot(_oX,_oZ)*me.Hpole*1e3];for(let z2=0;z2<5;z2++)cur[z2]>_fxMax[z2]&&(_fxMax[z2]=cur[z2],fb[z2].textContent=_fxMax[z2].toFixed(fd[z2]))}}})()}B.render(Q,W)};return nr=requestAnimationFrame(ir),()=>{cancelAnimationFrame(nr),ht.disconnect(),st.dispose(),Q.traverse(At=>{let bt=At;bt.geometry?.dispose?.();let wt=bt.material,Rt=Array.isArray(wt)?wt:wt?[wt]:[];for(let Bt of Rt){let me=Bt;me.map?.dispose?.(),me.dispose?.()}}),B.dispose(),B.domElement.parentNode===L&&L.removeChild(B.domElement),a.current=null,r.current=null,_psizeRef.current=null}},[]),useEffect(()=>{a.current?.(e)},[e.Dbase,e.Dtop,e.Hpole,e.Hsign,e.esign,e.Bsign,e.Dsign]),useEffect(()=>{r.current?.(h)},[h]),useEffect(()=>{_psizeRef.current?.(_psize)},[_psize]); return _jsxs("section",{className:"tunnel-view",children:[_jsxs("div",{className:"tunnel-stage",children:[_jsx("div",{ref:i,className:"tunnel-canvas"}),_jsx("div",{className:"view-cube",role:"group","aria-label":"Camera views",children:F2.map(L=>_jsx("button",{type:"button",onClick:()=>s.current?.setView(L),children:L},L))}),_jsxs("div",{className:"tunnel-toolbar",children:[_jsx("button",{type:"button",onClick:()=>c(L=>!L),children:l?"\u275A\u275A Pause":"\u25B6 Play"}),_jsxs("label",{children:["Particles",_jsx("input",{type:"range",min:.25,max:3,step:.25,value:h,onChange:L=>d(Number(L.target.value))})]}),_jsxs("label",{children:["Size",_jsx("input",{type:"range",min:.08,max:.7,step:.02,value:_psize,onChange:L=>_setPsize(Number(L.target.value))}),_jsx("span",{className:"unit",children:_psize.toFixed(2)})]}),_jsxs("label",{children:["Colour",_jsx("input",{type:"color",value:f,onChange:L=>p(L.target.value)})]}),_jsxs("label",{children:["Vibration \xD7",_jsx("input",{type:"range",min:0,max:60,step:1,value:g,disabled:S,onChange:L=>_(Number(L.target.value))}),_jsx("span",{className:"unit",children:g})]}),_jsxs("label",{className:"toggle",children:[_jsx("input",{type:"checkbox",checked:_truck,onChange:L=>_setTruck(L.target.checked)}),"Truck"]}),_jsxs("label",{children:["Truck speed",_jsx("input",{type:"range",min:0,max:40,step:1,value:_tkSpd,disabled:!_truck,onChange:L=>_setTkSpd(Number(L.target.value))}),_jsxs("span",{className:"unit",children:[_tkSpd," m/s"]})]}),_jsxs("label",{className:"toggle",children:[_jsx("input",{type:"checkbox",checked:S,onChange:L=>R(L.target.checked)}),"1:1 real"]}),_jsx("span",{className:"hint",children:"Drag to orbit \xB7 scroll to zoom"})]}),_jsxs("div",{className:"live-forces",ref:_liveRef,children:[_jsxs("div",{className:"lf-head",children:[_jsx("span",{children:"Live on pole"}),_jsx("em",{className:"lf-tag",children:""})]}),_jsx("div",{className:"lf-rows",children:["V|m/s","q|kPa","V_base|kN","M_base|kN·m","δ tip|mm"].map(L2=>{let P2=L2.split("|");return _jsxs("div",{className:"lf-row",children:[_jsx("span",{children:P2[0]}),_jsx("b",{children:"—"}),_jsx("i",{children:P2[1]})]},L2)})})]}),_jsxs("div",{className:"speed-legend",children:[_jsx("span",{children:"slow"}),_jsx("i",{}),_jsx("span",{children:"fast"})]})]}),_jsx(V2,{input:e,r:C,windSpeed:v,setWindSpeed:x,windDeg:m,setWindDeg:u}),_truck?_jsxs("aside",{className:"tunnel-hud truck-fx",ref:_tkFxRef,children:[_jsxs("div",{className:"result-header",children:[_jsxs("div",{children:[_jsx("p",{className:"eyebrow",children:"TRUCK SLIPSTREAM · SESSION PEAK"}),_jsx("h2",{children:"Max truck-induced effect on pole"})]}),_jsxs("span",{children:[_tkSpd," m/s truck"]})]}),_jsx("div",{className:"tkfx-rows",children:[["Peak slipstream at pole","m/s"],["Peak dynamic pressure","Pa"],["Added base shear","kN"],["Added moment","kN·m"],["Peak dynamic tip sway","mm"]].map(L2=>_jsxs("div",{className:"tkfx-row",children:[_jsx("span",{children:L2[0]}),_jsx("b",{children:"0.0"}),_jsx("i",{children:L2[1]})]},L2[0]))}),_jsx("p",{className:"dir-note",children:"Running maxima at the current wind and truck speed (reset when either changes) · illustrative, not code loads."})]}):null]})}
+
+function V2({input:e,r:t,windSpeed:n,setWindSpeed:i,windDeg:s,setWindDeg:a}){let r=.5*e.rhoAir*n**2;return _jsxs("aside",{className:"tunnel-hud",children:[_jsxs("div",{className:"result-header",children:[_jsxs("div",{children:[_jsx("p",{className:"eyebrow",children:"DYNAMIC WIND LOAD \xB7 ESTIMATE"}),_jsx("h2",{children:"Wind on the structure"})]}),_jsx("span",{children:t.regime})]}),_jsxs("div",{className:"wind-inputs",children:[_jsxs("label",{className:"wind-input",children:["Wind speed",_jsx("input",{type:"number",min:0,max:120,step:1,value:n,onChange:o=>i(Number(o.target.value))}),_jsx("span",{children:"m/s"})]}),_jsxs("label",{className:"wind-input",children:["Direction",_jsx("input",{type:"number",min:0,max:360,step:5,value:s,onChange:o=>a(Number(o.target.value))}),_jsx("span",{children:"\xB0"})]})]}),_jsx("p",{className:"dir-note",children:"0\xB0 = wind square to the sign face; sign load \u221D cos\xB2\u03B8."}),_jsxs("div",{className:"fig-result",children:[_jsxs("span",{children:[_jsx("b",{children:"V"})," ",Tt(n,0)," m/s"]}),_jsxs("span",{children:[_jsx("b",{children:"Re"})," ",Pa(t.Re)]}),_jsxs("span",{className:t.vivRisk?"ng":"ok",children:[_jsx("b",{children:"VIV"})," ",t.vivRisk?"REVIEW":"OK"]}),_jsxs("span",{className:t.galloping?"ng":"ok",children:[_jsx("b",{children:"Galloping"})," ",t.galloping?"FAIL":"OK"]})]}),_jsx(Cu,{rows:[["Dynamic pressure, q = \xBD\u03C1V\xB2",Tt(r,0),"Pa"],["Wind drag on sign, F_sign",Tt(t.F_sign,2),"kN"],["Wind drag on pole, F_pole",Tt(t.F_pole,2),"kN"],["Base shear (service), V_W",Tt(t.V_W,2),"kN"],["Overturning moment, M_W",Tt(t.M_W,1),"kN\xB7m"],["Torsion (eccentric sign), T_W",Tt(t.T_W,1),"kN\xB7m"],["Vortex-shedding freq, fs",Tt(t.fs,2),"Hz"],["Natural frequency, fn",Tt(t.fn,2),"Hz"],["Lock-in wind speed, Vcr",Tt(t.Vcr,1),"m/s"],["Reduced velocity, Ur",Tt(t.Ur,1),"-"],["Scruton number, Sc",Tt(t.Sc,1),"-"],["Strouhal number, St",Tt(t.St,2),"-"]]}),_jsx("p",{className:"assumption",children:"Flow model superposes the exact inviscid potential-flow fields for a circular cylinder (pole, per height) and a sphere doublet (sign blockage), with an empirical K\xE1rm\xE1n wake at fs = St\xB7V/D. Forces are the service wind demands from the design model \u2014 indicative only, for visualising the wind\u2013structure interaction. Not for design or construction."})]})}
+
+export default function WindTunnelView(props) {
+  const { input, results, code = 'CSA' } = props
+  const isCSA = code === 'CSA'
+  
+  // Normalize input to include any defaults needed by the aerodynamic simulation
+  const normalizedInput = {
+    ...input,
+    tw: input.t || input.tw || 12.7,
+    Fy: input.Fy || 350,
+    Es: input.Es || 200000,
+    gamS: input.gamS || 77,
+    Vwind: input.Vwind || 45,
+    Kz: input.Kz || 0.87,
+    Kzt: input.Kzt || 1.0,
+    Gwind: input.G || input.Gwind || 1.14,
+    CdSign: input.Cd_s || input.CdSign || 1.7,
+    CdPole: input.Cd_p || input.CdPole || 0.45,
+    tice: input.t_i || input.tice || 0,
+    gamIce: input.gamma_i || input.gamIce || 9.0,
+    Wdms: input.Wdms || 6.0,
+    phi: input.phi || 0.9,
+    deflRatio: input.deflRatio || 150,
+    rhoAir: input.rhoAir || 1.225,
+    nuAir: input.nuAir || 15e-6,
+    St: input.St || 0.2,
+    zeta: input.zeta || 0.01,
+    Larm: input.Larm || 9.0,
+    Darm: input.Darm || 250,
+    harm: input.Hsign || 7.1825
+  }
+
+  return <H2 input={normalizedInput} r={results} csa={isCSA} />
 }
-
-function TruckSlipstreamHUD({ truckSpeed }) {
-  return (
-    <aside className="tunnel-hud truck-fx">
-      <div className="result-header">
-        <div>
-          <p className="eyebrow">TRUCK SLIPSTREAM · SESSION PEAK</p>
-          <h2>Max truck-induced effect on pole</h2>
-        </div>
-        <span>{truckSpeed} m/s truck</span>
-      </div>
-      <div className="tkfx-rows">
-        {[
-          ['Peak slipstream at pole', 'm/s'],
-          ['Peak dynamic pressure', 'Pa'],
-          ['Added base shear', 'kN'],
-          ['Added moment', 'kN·m'],
-          ['Peak dynamic tip sway', 'mm']
-        ].map(([label, unit]) => (
-          <div key={label} className="tkfx-row">
-            <span>{label}</span>
-            <b>0.0</b>
-            <i>{unit}</i>
-          </div>
-        ))}
-      </div>
-      <p className="dir-note">Running maxima at the current wind and truck speed (reset when either changes) — illustrative, not code loads.</p>
-    </aside>
-  )
-}
-
-function WindTunnelStage({ input, windSpeed, windDeg, truckOn, truckSpeed, backgroundColor }) {
-  const mountRef = useRef(null)
-  const [scene, setScene] = useState(null)
-
-  useEffect(() => {
-    if (!mountRef.current) return
-
-    const width = mountRef.current.clientWidth
-    const height = mountRef.current.clientHeight
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
-    renderer.setSize(width, height)
-    renderer.setPixelRatio(window.devicePixelRatio)
-    renderer.shadowMap.enabled = true
-    mountRef.current.appendChild(renderer.domElement)
-
-    const scene = new THREE.Scene()
-    scene.background = new THREE.Color(backgroundColor)
-    setScene(scene)
-
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000)
-    camera.position.set(30, 20, 30)
-    camera.lookAt(0, 10, 0)
-
-    const controls = new OrbitControls(camera, renderer.domElement)
-    controls.enableDamping = true
-    controls.target.set(0, 8, 0)
-
-    const ambient = new THREE.AmbientLight(0xffffff, 0.6)
-    scene.add(ambient)
-
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1)
-    dirLight.position.set(20, 40, 20)
-    dirLight.castShadow = true
-    scene.add(dirLight)
-
-    const poleGroup = new THREE.Group()
-    const poleGeometry = new THREE.CylinderGeometry(input.Dtop / 2000, input.Dbase / 2000, input.Hpole, 16)
-    const poleMaterial = new THREE.MeshStandardMaterial({ color: 0x5a7ab8, roughness: 0.7, metalness: 0.3 })
-    const poleMesh = new THREE.Mesh(poleGeometry, poleMaterial)
-    poleMesh.position.y = input.Hpole / 2
-    poleMesh.castShadow = true
-    poleMesh.receiveShadow = true
-    poleGroup.add(poleMesh)
-
-    const signGeometry = new THREE.BoxGeometry(input.Bsign, input.Dsign, 0.15)
-    const signMaterial = new THREE.MeshStandardMaterial({ color: 0x2a2e3a, roughness: 0.3, metalness: 0.5 })
-    const signMesh = new THREE.Mesh(signGeometry, signMaterial)
-    signMesh.position.set(input.esign, input.Hsign, 0)
-    signMesh.castShadow = true
-    poleGroup.add(signMesh)
-
-    const baseGeometry = new THREE.CylinderGeometry(input.Dpad / 2, input.Dpad / 2, input.hpad, 32)
-    const baseMaterial = new THREE.MeshStandardMaterial({ color: 0x9aa0a8, roughness: 0.8 })
-    const baseMesh = new THREE.Mesh(baseGeometry, baseMaterial)
-    baseMesh.position.y = -input.hpad / 2
-    baseMesh.receiveShadow = true
-    poleGroup.add(baseMesh)
-
-    const groundGeometry = new THREE.PlaneGeometry(80, 80)
-    const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x1a1f2e, roughness: 0.9 })
-    const ground = new THREE.Mesh(groundGeometry, groundMaterial)
-    ground.rotation.x = -Math.PI / 2
-    ground.position.y = -input.hpad
-    ground.receiveShadow = true
-    scene.add(ground)
-    scene.add(poleGroup)
-
-    const windConeGeometry = new THREE.ConeGeometry(0.5, 3, 8)
-    const windConeMaterial = new THREE.MeshBasicMaterial({ color: 0x1668d6, transparent: true, opacity: 0.3 })
-    const windCone = new THREE.Mesh(windConeGeometry, windConeMaterial)
-    windCone.rotation.x = -Math.PI / 2
-    windCone.position.set(0, 5, -15)
-    scene.add(windCone)
-
-    let animationId
-    const animate = () => {
-      animationId = requestAnimationFrame(animate)
-      controls.update()
-      renderer.render(scene, camera)
-    }
-    animate()
-
-    const handleResize = () => {
-      const w = mountRef.current.clientWidth
-      const h = mountRef.current.clientHeight
-      camera.aspect = w / h
-      camera.updateProjectionMatrix()
-      renderer.setSize(w, h)
-    }
-    window.addEventListener('resize', handleResize)
-
-    return () => {
-      cancelAnimationFrame(animationId)
-      window.removeEventListener('resize', handleResize)
-      renderer.dispose()
-      mountRef.current?.removeChild(renderer.domElement)
-    }
-  }, [input, backgroundColor])
-
-  useEffect(() => {
-    if (!scene) return
-    const poleGroup = scene.children.find(c => c.type === 'Group')
-    if (poleGroup) {
-      const targetRot = THREE.MathUtils.degToRad(-windDeg)
-      poleGroup.rotation.y = THREE.MathUtils.lerp(poleGroup.rotation.y, targetRot, 0.1)
-    }
-  }, [windDeg, scene])
-
-  return (
-    <div className="tunnel-stage" ref={mountRef}>
-      <div className="tunnel-canvas" />
-      <div className="view-cube">
-        <button>Top</button>
-        <button>Front</button>
-        <button>Side</button>
-        <button>Iso</button>
-      </div>
-      <div className="tunnel-toolbar">
-        <label className="toggle">
-          <input type="checkbox" checked={truckOn} onChange={e => {}} disabled />
-          Truck
-        </label>
-        <label>Truck speed <input type="range" min={0} max={40} step={1} value={truckSpeed} disabled /> <span className="unit">{truckSpeed} m/s</span></label>
-        <label className="toggle">
-          <input type="checkbox" /> 1:1 real
-        </label>
-        <span className="hint">Drag to orbit · scroll to zoom</span>
-      </div>
-      <div className="live-forces">
-        <div className="lf-head"><span>Live on pole</span><em className="lf-tag">•••</em></div>
-        <div className="lf-rows">
-          {['V|m/s', 'q|kPa', 'V_base|kN', 'M_base|kN·m', 'δ_tip|mm'].map(row => {
-            const [label, unit] = row.split('|')
-            return (
-              <div key={label} className="lf-row">
-                <span>{label}</span>
-                <b>-</b>
-                <i>{unit}</i>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-      <div className="speed-legend">
-        <span>slow</span>
-        <i />
-        <span>fast</span>
-      </div>
-    </div>
-  )
-}
-
-function WindTunnelView({ input, results, windSpeed, setWindSpeed, windDeg, setWindDeg, truckOn, setTruckOn, truckSpeed, setTruckSpeed }) {
-  const [bgColor, setBgColor] = useState('#0a0f1a')
-
-  return (
-    <section className="wt-figure" style={{ gridColumn: '1 / -1' }}>
-      <div className="tunnel-view">
-        <WindTunnelStage input={input} windSpeed={windSpeed} windDeg={windDeg} truckOn={truckOn} truckSpeed={truckSpeed} backgroundColor={bgColor} />
-        <div>
-          <WindTunnelHUD input={input} results={results} windSpeed={windSpeed} setWindSpeed={setWindSpeed} windDeg={windDeg} setWindDeg={setWindDeg} />
-          {truckOn && <TruckSlipstreamHUD truckSpeed={truckSpeed} />}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-export default WindTunnelView

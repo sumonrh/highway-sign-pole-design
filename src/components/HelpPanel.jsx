@@ -23,16 +23,16 @@ function HelpPanel({ onClose, code }) {
   const csa = code === 'CSA'
 
   const steps = [
-    ["1 · Define geometry", "Enter the pole height Hₚ, the sign centroid elevation hₛ, the eccentricity e of the sign from the pole axis (the torsion arm), the panel size Bₛ × dₛ, the base/top outside diameters D, Dₜ and the wall thickness t. These drive both the loads and the section properties."],
-    ["2 · Wind velocity pressure", csa ? "Convert the site wind speed V into a velocity pressure using the CAN/CSA S6-19 (CHBDC) Cl.3.10 form qz = 0.5·ρ·Ce·Cg·V² with ρ = 1.25 kg/m³, where Ce is the exposure coefficient and Cg the gust effect coefficient (no separate topographic term)." : "Convert the site 3-second gust V into a velocity pressure qz using the height/exposure Kz, topographic Kzt and gust G factors (AASHTO LTS Eq 3.8.1-1, SI form with air density 1.225 kg/m³)."],
-    ["3 · Wind forces", "Apply qz to the projected areas with drag coefficients: the flat sign panel (Cd,s) and the round pole (Cd,p, using the average diameter over the height). This gives the point wind force F_sign at hₛ and the distributed wind force F_pole on the shaft."],
-    ["4 · Dead & ice loads", `Add the pole self-weight (steel volume × γs from the average of base and top sections), the supplied DMS + attachment weight Wd, and the radial ice on the pole surface and one sign face (${csa ? 'CHBDC climatic ice / owner' : 'AASHTO LTS 3.9'}).`],
-    ["5 · Service demands at base", "Sum the effects at the fixed base: shear V_W = F_sign + F_pole, overturning moment M_W = F_sign·hₛ + F_pole·(Hₚ/2), and torsion T_W = F_sign·e from the sign eccentricity."],
-    ["6 · Factor the load combinations", "Form CSA S6-19 combinations — Combo 1: 1.1D + 1.3W and Combo 2: 1.1D + 0.7W + 1.3I — for axial, shear, moment and torsion, then take the governing (maximum) factored demand Pf, Vf, Mf, Tf."],
+    ["1 · Define geometry", "Enter the pole height Hₚ, base/top diameters D, Dₜ, wall thickness t, horizontal signal arm reach L_arm, diameter D_arm, axis height h_arm, arm weight W_arm, and DMS sign panel size Bₛ × dₛ, centroid elevation hₛ, reach e, and weight W_d. These define the full structural frame, wind areas, and dead load eccentricities."],
+    ["2 · Wind velocity pressure", csa ? "Determine reference wind pressure qz (from CSA S6-19 Table A3.1.1 or qz = 0.5·ρ·V² with ρ = 1.25 kg/m³), exposure coefficient Ce (Table 3.9), and gust effect coefficient Cg (2.5 for sign poles)." : "Convert the site 3-second gust V into velocity pressure qz using Kz, Kzt and gust G factors (AASHTO LTS Eq 3.8.1-1, SI air 1.225 kg/m³)."],
+    ["3 · Wind forces", "Apply gust wind pressure to projected areas with drag coefficients: flat sign panel (Ch = 1.7), round pole shaft (Ch,p = 0.5), and round signal arm (Ch,arm = 0.5) to obtain component forces F_sign, F_pole, and F_arm."],
+    ["4 · Dead & ice loads", "Calculate tapered pole self-weight Wp (steel volume × γs from average section), arm weight Warm, and DMS sign weight Wd. Compute permanent transverse bending moment My,D = Wd·e + Warm·e_arm from dead load eccentricities."],
+    ["5 · Service demands at base", "Sum base reactions: shear V_W = F_sign + F_pole + F_arm, overturning moment Mx_W = F_sign·hₛ + F_pole·(Hₚ/2) + F_arm·h_arm, transverse moment My_S (envelope of dead eccentricity and parallel wind), and torsion T_W = F_sign·e."],
+    ["6 · Factor the load combinations", "Form CSA S6-19 combinations — Combo 1: 1.1D + 1.4W and Combo 2: 1.1D + 0.7W + 1.3I — for axial, shear, biaxial moments (Mfx, Mfy) and torsion. Calculate resultant factored moment Mf_res = √(Mfx² + Mfy²) governing circular sections."],
     ["7 · Section properties at base", "Compute the circular-hollow section properties from D and t: area A, inertia I, elastic/plastic moduli S and Z, torsion constant J and modulus Ct, and the D/t ratio. Classify the section (class 1–4) per CSA S16 to decide whether Z or S governs bending."],
     ["8 · Factored resistances", `Compute φ-factored member resistances: moment Mr, axial (squash) Pr, shear Vr and torsional Tr per ${csa ? 'CSA S16-19' : 'CSA S16-19 / LTS 5'}.`],
-    ["9 · Strength checks", "Divide each demand by its resistance to get utilizations, then combine: axial+bending (P/Pr + M/Mr) and shear+torsion (V/Vr + T/Tr). The governing utilization U must be ≤ 1.0 (OK), otherwise the section is NG."],
-    ["10 · Serviceability (deflection)", "Check the cantilever tip deflection from the sign (point load) plus the pole wind (UDL) against the limit Hₚ/n. Excessive sway also drives the fatigue/vibration behaviour animated in the elevation figure."],
+    ["9 · Strength checks", "Divide each demand by its resistance to get utilizations, then combine: axial+bending (P/Pr + Mres/Mr) and shear+torsion (V/Vr + T/Tr). The governing utilization U must be ≤ 1.0 (OK), otherwise the section is NG."],
+    ["10 · Serviceability (deflection)", "Check the cantilever tip deflection from the sign (point load) plus the pole wind (UDL) against the limit Hₚ/150. Excessive sway also drives the fatigue/vibration behaviour animated in the elevation figure."],
     ["11 · Foundation design (CSA S6-19 & CSA A23.3-19)", "Calculate footing self-weight, neck pier weight, and granular overburden. Check ULS Meyerhof bearing pressure P_max ≤ q_r (factored 250 kPa default), middle-third kern eccentricity 6e ≤ D and 6e ≤ B, sliding stability (FOS ≥ 1.5), and uplift resistance. Compute cantilever bending moment M_face at neck face and one-way shear V_f at d from neck face, checking against CSA A23.3-19 flexural resistance M_r (§10) and shear resistance V_c (§11 simplified)."],
     ["12 · Anchor bolt design (CSA A23.3-19 Annex D)", "Evaluate anchor cage for steel tensile resistance N_sar (Eq. D.2, R=0.75), concrete pullout N_pr (Eq. D.16 for heavy hex head), steel shear V_sar (Eq. D.31), and concrete pryout V_cp (Eq. D.44). Check maximum tension and shear demands under factored pole reactions against combined interaction β_N^(5/3) + β_V^(5/3) ≤ 1.00 (Clause D.7)."]
   ]
@@ -63,26 +63,32 @@ function HelpPanel({ onClose, code }) {
       <div className="help-grid">
         <FormulaBlock title={csa ? 'A · Wind pressure & forces (CAN/CSA S6-19 Cl.3.10)' : 'A · Wind pressure & forces (AASHTO LTS 3.8)'} rows={[
           { name: 'A_sign', expr: 'A_s = B_s · d_s', note: 'Sign panel area (m²)' },
-          csa ? { name: 'qz', expr: 'qz = 0.625 · Ce · Cg · V²', note: 'CHBDC, 0.5·ρ·V² with ρ=1.25 (Pa)' } : { name: 'qz', expr: 'qz = 0.613 · Kz · Kzt · G · V²', note: 'Velocity pressure (Pa), SI air 1.225' },
+          { name: 'A_arm', expr: 'A_arm = (D_arm/1000) · L_arm', note: 'Projected arm area (m²)' },
           { name: 'A_pole', expr: 'A_p = ((D + D_t)/2)/1000 · H_p', note: 'Projected pole area, avg dia (m²)' },
-          { name: 'F_sign', expr: 'F_sign = qz · Cd_s · A_s / 1000', note: 'Wind force on sign (kN)' },
-          { name: 'F_pole', expr: 'F_pole = qz · Cd_p · A_p / 1000', note: 'Wind force on pole (kN)' }
+          csa ? { name: 'qz', expr: 'qz = 0.625 · Ce · Cg · V²  (or from Table A3.1.1)', note: 'CHBDC reference pressure (Pa)' } : { name: 'qz', expr: 'qz = 0.613 · Kz · Kzt · G · V²', note: 'Velocity pressure (Pa), SI air 1.225' },
+          { name: 'F_sign', expr: 'F_sign = qz · Ce · Cg · Ch · A_s / 1000', note: 'Wind on sign, Ch=1.7 (kN)' },
+          { name: 'F_arm', expr: 'F_arm = qz · Ce · Cg · Ch_arm · A_arm / 1000', note: 'Wind on signal arm, Ch=0.5 (kN)' },
+          { name: 'F_pole', expr: 'F_pole = qz · Ce · Cg · Ch_p · A_p / 1000', note: 'Wind on pole shaft, Ch=0.5 (kN)' }
         ]} />
         <FormulaBlock title={csa ? 'B · Dead & ice loads (CHBDC climatic)' : 'B · Dead & ice loads (LTS 3.9 / 3.4)'} rows={[
-          { name: 'W_ice', expr: 'W_i = γ_i · (π·(D/1000)·(t_i/1000)·H_p + A_s·(t_i/1000))', note: 'Ice on pole + one sign face (kN)' },
-          { name: 'W_pole', expr: 'W_p = γ_s · ((A + A_t)/2)/10⁶ · H_p', note: 'Pole self-weight, avg section (kN)' },
-          { name: 'P_D', expr: 'P_D = W_p + W_d', note: 'Total dead axial at base (kN)' }
+          { name: 'W_pole', expr: 'W_p = γ_s · ((A_base + A_top)/2)/10⁶ · H_p', note: 'Pole self-weight, avg section (kN)' },
+          { name: 'W_arm', expr: 'W_arm', note: 'Signal arm dead load (kN)' },
+          { name: 'W_dms', expr: 'W_d', note: 'Sign panel + attachments (kN)' },
+          { name: 'P_D', expr: 'P_D = W_p + W_arm + W_d', note: 'Total dead axial at base (kN)' },
+          { name: 'My_D', expr: 'My_D = W_d · e + W_arm · e_arm', note: 'Permanent transverse dead moment (kN·m)' }
         ]} />
         <FormulaBlock title='C · Service demands at base' rows={[
-          { name: 'V_W', expr: 'V_W = F_sign + F_pole', note: 'Wind shear (kN)' },
-          { name: 'M_W', expr: 'M_W = F_sign·hₛ + F_pole·(Hₚ/2)', note: 'Overturning moment (kN·m)' },
-          { name: 'T_W', expr: 'T_W = F_sign · e', note: 'Torsion from sign eccentricity (kN·m)' },
-          { name: 'P_ice', expr: 'P_i = W_i', note: 'Ice axial (kN)' }
+          { name: 'V_W', expr: 'V_W = F_sign + F_pole + F_arm', note: 'Total wind shear (kN)' },
+          { name: 'Mx_W', expr: 'Mx_W = F_sign·hₛ + F_pole·(Hₚ/2) + F_arm·h_arm', note: 'Overturning moment normal to sign (kN·m)' },
+          { name: 'My_W', expr: 'My_W = F_pole·(Hₚ/2) + F_arm·h_arm', note: 'Transverse wind moment, edge-on (kN·m)' },
+          { name: 'My_S', expr: 'My_S = max(My_D + My_W, Mx_W·tan(θ) + My_D)', note: 'Governing transverse moment (kN·m)' },
+          { name: 'T_W', expr: 'T_W = F_sign · e', note: 'Torsion from sign reach (kN·m)' }
         ]} />
         <FormulaBlock title='D · Factored demands (CSA S6-19)' rows={[
-          { name: 'Combo 1', expr: '1.1D + 1.3W → Pf₁ Vf₁ Mf₁ Tf₁', note: 'Wind-governed' },
-          { name: 'Combo 2', expr: '1.1D + 0.7W + 1.3I → Pf₂ Vf₂ Mf₂ Tf₂', note: 'Ice + reduced wind' },
-          { name: 'Governing', expr: 'Pf = max(Pf₁,Pf₂), … Tf = max(Tf₁,Tf₂)', note: 'Max of combos' }
+          { name: 'Combo 1', expr: '1.1D + 1.4W → Pf₁ Vf₁ Mfx₁ Mfy₁ Tf₁', note: 'Governing wind ULS (Cl.3)' },
+          { name: 'Combo 2', expr: '1.1D + 0.7W + 1.3I → Pf₂ Vf₂ Mfx₂ Mfy₂ Tf₂', note: 'Ice + reduced wind' },
+          { name: 'Mf_res', expr: 'Mf_res = √(Mfx² + Mfy²)', note: 'Biaxial resultant moment (kN·m)' },
+          { name: 'Governing', expr: 'Pf=max(Pf₁,Pf₂), Vf=max(Vf₁,Vf₂), Tf=max(Tf₁,Tf₂)', note: 'Governing factored demands' }
         ]} />
         <FormulaBlock title='E · Section properties — circular hollow (base)' rows={[
           { name: 'd_i', expr: 'd_i = D − 2t', note: 'Inside diameter (mm)' },
